@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.9 2000/05/01 15:03:42 root Exp root $ 
+# $Id: Xbm.pm,v 1.11 2000/05/03 14:38:50 root Exp $ 
 
 use strict ;
 
 use vars qw( $VERSION ) ;
-$VERSION = '1.02' ;
+$VERSION = '1.03' ;
 
 use Carp qw( carp croak ) ;
 use Symbol () ;
@@ -97,6 +97,11 @@ sub _set { # Object method
     my $field = shift ;
 
     $self->{$field} = shift ;
+}
+
+
+sub DESTROY {
+    ; # Save's time
 }
 
 
@@ -395,7 +400,7 @@ sub save { # Object method
 
     $file =~ s,^.*/,,o ;            
     $file =~ s/\.xbm$//o ;         
-    $file =~ tr/[-_a-za-z0-9]/_/c ;
+    $file =~ tr/[-_A-Za-z0-9]/_/c ;
     
     print $fh "#define ${file}_width $width\n#define ${file}_height $height\n" ;
     print $fh "#define ${file}_x_hot $hotx\n#define ${file}_y_hot $hoty\n" 
