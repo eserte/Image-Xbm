@@ -43,6 +43,13 @@ Image::Xbm - Load, create, manipulate and save xbm image files.
 
     1111101110001110001001001000100000010000
 
+View an xbm file from the command line:
+
+    % perl -MImage::Xbm -e'print Image::Xbm->new(-file,shift)->as_string' file
+
+Create an xbm file from the command line:
+
+    % perl -MImage::Xbm -e'Image::Xbm->new_from_string("###\n#-#\n-#-")->save("test.xbm")'
 
 =head1 DESCRIPTION
 

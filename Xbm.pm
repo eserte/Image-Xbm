@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.3 2000/04/30 18:36:52 root Exp root $ 
+# $Id: Xbm.pm,v 1.5 2000/04/30 21:26:54 root Exp root $ 
 
 use strict ;
 
 use vars qw( $VERSION ) ;
-$VERSION = '1.00' ;
+$VERSION = '1.01' ;
 
 use Carp qw( carp croak ) ;
 use Symbol () ;
@@ -362,7 +362,7 @@ sub load { # Object method
     for( my $i = 0 ; ; $i++ ) {
         BIT:
         for( my $bit = 1 ; $bit <= 128 ; $bit <<= 1 ) {
-            vec( $bits, $bitindex++, 1 ) = ( $val[$i] & $bit ) ? 1 : 0 ;
+            CORE::vec( $bits, $bitindex++, 1 ) = ( $val[$i] & $bit ) ? 1 : 0 ;
             $x++ ;
             if( $x == $width ) {
                 $x = 0 ;
@@ -484,6 +484,13 @@ Image::Xbm - Load, create, manipulate and save xbm image files.
 
     1111101110001110001001001000100000010000
 
+View an xbm file from the command line:
+
+    % perl -MImage::Xbm -e'print Image::Xbm->new(-file,shift)->as_string' file
+
+Create an xbm file from the command line:
+
+    % perl -MImage::Xbm -e'Image::Xbm->new_from_string("###\n#-#\n-#-")->save("test.xbm")'
 
 =head1 DESCRIPTION
 
