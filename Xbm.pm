@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.15 2000/05/15 22:11:12 root Exp root $ 
+# $Id: Xbm.pm,v 1.17 2000/05/25 20:45:54 root Exp $ 
 
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.06' ;
+$VERSION = '1.07' ;
 
 use Image::Base ;
 
