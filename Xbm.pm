@@ -1,11 +1,15 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.11 2000/05/03 14:38:50 root Exp $ 
+# $Id: Xbm.pm,v 1.13 2000/05/04 20:12:49 root Exp $ 
 
 use strict ;
 
-use vars qw( $VERSION ) ;
-$VERSION = '1.03' ;
+use vars qw( $VERSION @ISA ) ;
+$VERSION = '1.04' ;
+
+use Image::Base ;
+
+@ISA = qw( Image::Base ) ;
 
 use Carp qw( carp croak ) ;
 use Symbol () ;
@@ -24,33 +28,19 @@ my @MASK  = ( 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 ) ;
 #
 # _class_get    class   object
 # _class_set    class   object
-# _get                  object
-# _set                  object
+# _get                  object inherited
+# _set                  object inherited
 
 {
-    my( $setch, $unsetch, $sethotch, $unsethotch ) = ( '#', '-', 'H', 'h', ) ;
+    my %Ch = ( -setch    => '#', -unsetch   => '-', 
+               -sethotch => 'H', -unsethotch => 'h' ) ;
+        
 
     sub _class_get { # Class and object method
         my $self  = shift ;
         my $class = ref( $self ) || $self ;
 
-        my $field = shift ;
-
-        if(    $field eq '-setch' ) {
-            $setch ;
-        }
-        elsif( $field eq '-unsetch' ) {
-            $unsetch ;
-        }
-        elsif( $field eq '-sethotch' ) {
-            $sethotch ;
-        }
-        elsif( $field eq '-unsethotch' ) {
-            $unsethotch ;
-        }
-        else {
-            croak "_class_get() invalid field `$field'" ;
-        }
+        $Ch{shift()} ;
     }
 
 
@@ -63,40 +53,8 @@ my @MASK  = ( 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 ) ;
 
         croak "_class_set() `$field' has no value" unless defined $val ;
 
-        if(    $field eq '-setch' ) {
-            $setch      = $val ;
-        }
-        elsif( $field eq '-unsetch' ) {
-            $unsetch    = $val ;
-        }
-        elsif( $field eq '-sethotch' ) {
-            $sethotch   = $val ;
-        }
-        elsif( $field eq '-unsethotch' ) {
-            $unsethotch = $val ;
-        }
-        else {
-            croak "_class_set() invalid field `$field'" ;
-        }
+        $Ch{$field} = $val ;
      }
-}
-
-
-sub _get { # Object method
-    my $self  = shift ;
-#    my $class = ref( $self ) || $self ;
-   
-    $self->{shift()} ;
-}
-
-
-sub _set { # Object method
-    my $self  = shift ;
-#    my $class = ref( $self ) || $self ;
-    
-    my $field = shift ;
-
-    $self->{$field} = shift ;
 }
 
 
@@ -136,7 +94,7 @@ sub new_from_string { # Class and object method
         }
         for( my $x = 0 ; $x < $width ; $x++ ) {
             my $c = substr( $line, $x, 1 ) ;
-            $self->xy( $x, $y, $c eq $setch ? 1 : $c eq $sethotch ? 1 : 0 ) ;
+            $self->xybit( $x, $y, $c eq $setch ? 1 : $c eq $sethotch ? 1 : 0 ) ;
             $self->set( '-hotx' => $x, '-hoty' => $y ) 
             if $c eq $sethotch or $c eq $unsethotch ;
         }
@@ -233,7 +191,7 @@ sub set { # Object method (and class method for class attributes)
 }
 
 
-sub xy { # Object method
+sub xybit { # Object method
     my $self  = shift ;
 #    my $class = ref( $self ) || $self ;
 
@@ -247,6 +205,27 @@ sub xy { # Object method
     }
     else {
         CORE::vec( $self->{'-bits'}, $offset, 1 ) ; 
+    }
+}
+
+
+sub xy { # Object method
+    my $self  = shift ;
+#    my $class = ref( $self ) || $self ;
+
+    my( $x, $y, $val ) = @_ ; 
+
+    # No range checking
+    my $offset = ( $y * $self->get( '-width' ) ) + $x ;
+
+    if( defined $val ) {
+        $val = 1 if ( $val =~ /^\d+$/ and $val >= 1 ) or 
+                    ( lc $val eq 'black' )            or
+                    ( $val =~ /^#(\d+)$/ and hex $1 ) ;
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) = $val ; 
+    }
+    else {
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) ? 'black' : 'white' ; 
     }
 }
 
@@ -414,7 +393,7 @@ sub save { # Object method
         for( my $x = 0 ; $x < $width ; $x++ ) {
             my $mask = $x & 7 ;
             $char[$char] = 0 unless defined $char[$char] ;
-            if( $self->xy( $x, $y ) ) {
+            if( $self->xybit( $x, $y ) ) {
                 $char[$char] |= $MASK[$mask] ;
             }
             $char++ if $mask == 7 ;
@@ -459,8 +438,9 @@ Image::Xbm - Load, create, manipulate and save xbm image files.
 
     my $q = $p->new_from_string( "H##", "#-#", "###" ) ;
 
-    $i->xy( 5, 8, 1 ) ;           # Set a bit
-    print '1' if $i->xy( 9, 3 ) ; # Get a bit
+    $i->xybit( 5, 8, 1 ) ;           # Set a bit
+    print '1' if $i->xybit( 9, 3 ) ; # Get a bit
+    print $i->xy( 4, 5 ) ;           # Will print black or white
 
     $i->vec( 24, 0 ) ;            # Set a bit using a vector offset
     print '1' if $i->vec( 24 ) ;  # Get a bit using a vector offset
@@ -495,6 +475,12 @@ Create an xbm file from the command line:
     % perl -MImage::Xbm -e'Image::Xbm->new_from_string("###\n#-#\n-#-")->save("test.xbm")'
 
 =head1 DESCRIPTION
+
+This class module provides basic load, manipulate and save functionality for
+the xbm file format. It inherits from C<Image::Base> which provides additional
+manipulation functionality, e.g. C<new_from_image()>. See the C<Image::Base>
+pod for information on adding your own functionality to all the C<Image::Base>
+derived classes.
 
 =head2 new()
 
@@ -617,12 +603,24 @@ and C<set>.
 
 =back
 
-=head2 xy()
+=head2 xybit()
 
     $i->xy( 4, 11, 1 ) ;      # Set the bit at point 4,11
     my $v = $i->xy( 9, 17 ) ; # Get the bit at point 9,17
 
 Get/set bits using x, y coordinates; coordinates start at 0.
+
+=head2 xy()
+
+    $i->xy( 4, 11, 'black' ) ;  # Set the bit from a colour at point 4,11
+    my $v = $i->xy( 9, 17 ) ;   # Get the bit as a colour at point 9,17
+
+Get/set bits using colours using x, y coordinates; coordinates start at 0.
+
+If set with a colour of 'black' or a numeric value > 0 or a string not
+matching /^#0+$/ then the bit will be set, otherwise it will be cleared.
+
+If you get a colour you will always get 'black' or 'white'.
 
 =head2 vec()
 
@@ -692,6 +690,12 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2000/05/04
+
+Made xy() compatible with Image::Base, use xybit() for the earlier
+functionality.
+
 
 2000/05/01
 
