@@ -10,7 +10,7 @@ use strict ;
 
 use vars qw( $Loaded $Count $DEBUG $TRIMWIDTH ) ;
 
-BEGIN { $| = 1 ; print "1..8\n" }
+BEGIN { $| = 1 ; print "1..10\n" }
 END   { print "not ok 1\n" unless $Loaded ; }
 
 use Image::Xbm ;
@@ -21,7 +21,7 @@ $TRIMWIDTH = @ARGV ? shift : 60 ;
 
 report( "loaded module ", 0, '', __LINE__ ) ;
 
-my( $i, $j, $k ) ;
+my( $i, $j, $k, $s ) ;
 my $fp = "/tmp/image-xbm" ;
 
 eval {
@@ -43,6 +43,18 @@ eval {
     die "Failed to save image" unless -e "$fp-test1.xbm" ;
 } ;
 report( "save()", 0, $@, __LINE__ ) ;
+
+eval {
+    $s = $i->serialise ;
+} ;
+report( "serialise()", 0, $@, __LINE__ ) ;
+
+eval {
+    $k = Image::Xbm->new_from_serialised( $s ) ;
+    die unless $k->is_equal( $i ) ;
+} ;
+report( "new_from_serialised()", 0, $@, __LINE__ ) ;
+
 
 eval {
     $i = undef ;

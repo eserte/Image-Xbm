@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.13 2000/05/04 20:12:49 root Exp $ 
+# $Id: Xbm.pm,v 1.14 2000/05/06 12:49:00 root Exp root $ 
 
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.04' ;
+$VERSION = '1.05' ;
 
 use Image::Base ;
 
@@ -134,13 +134,57 @@ sub new { # Class and object method
         $self->_set( $field, $arg{$field} ) if defined $arg{$field} ;
     }
 
-    $self->load if $self->get( '-file' ) and not $self->get( '-bits' ) ;
+    my $file = $self->get( '-file' ) ;
+    $self->load if defined $file and -r $file and not $self->{'-bits'} ;
+
+    croak "new() `$file' not found or unreadable" 
+    if defined $file and not defined $self->get( '-width' ) ;
+
 
     foreach my $field ( qw( -width -height ) ) {
         croak "new() $field must be set" unless defined $self->get( $field ) ;
     }
 
     $self ;
+}
+
+
+sub new_from_serialised { # Class and object method
+    my $self       = shift ;
+    my $class      = ref( $self ) || $self ;
+    my $serialised = shift ;
+
+    $self = $class->new( '-width' => 8192, '-height' => 8192 ) ;
+
+    my( $flen, $blen, $width, $height, $hotx, $hoty, $data ) =
+        unpack "n N n n n n A*", $serialised ;
+    
+    my( $file, $bits ) = unpack "A$flen A$blen", $data ;
+
+    $self->_set( '-file'   => $file ) ;
+    $self->_set( '-width'  => $width ) ;
+    $self->_set( '-height' => $height ) ;
+    $self->_set( '-hotx'   => $hotx > $width  ? -1 : $hotx ) ;
+    $self->_set( '-hoty'   => $hoty > $height ? -1 : $hoty ) ;
+    $self->_set( '-bits'   => $bits ) ;
+
+    $self ;
+}
+
+
+sub serialise { # Object method
+    my $self  = shift ;
+#    my $class = ref( $self ) || $self ;
+
+    my( $file, $bits ) = $self->get( -file, -bits ) ;
+    my $flen = length( $file ) ;
+    my $blen = length( $bits ) ;
+
+    pack "n N n n n n A$flen A$blen", 
+        $flen, $blen, 
+        $self->get( -width ), $self->get( -height ), 
+        $self->get( -hotx ),  $self->get( -hoty ),
+        $file, $bits ;
 }
 
 
@@ -438,6 +482,9 @@ Image::Xbm - Load, create, manipulate and save xbm image files.
 
     my $q = $p->new_from_string( "H##", "#-#", "###" ) ;
 
+    my $s = $q->serialse ; # Compresses a little too.
+    my $t = Image::Xbm->new_from_serialsed( $s ) ;
+
     $i->xybit( 5, 8, 1 ) ;           # Set a bit
     print '1' if $i->xybit( 9, 3 ) ; # Get a bit
     print $i->xy( 4, 5 ) ;           # Will print black or white
@@ -496,10 +543,6 @@ If we set C<-file> then all the other arguments are ignored (since they're
 taken from the file). If we don't specify a file, C<-width> and C<-height> are
 mandatory.
 
-Note that if you are creating an image from scratch you should not set
-C<-file> when you call C<new>; you should either C<set> it later or simply
-include the filename in any call to C<save> which will set it for you.
-
 =over
 
 =item C<-file>
@@ -549,6 +592,22 @@ want to use different characters you can:
 You can also specify a hotspot by making one of the characters a 'H' (set bit
 hotspot) or 'h' (unset bit hotspot) -- you can use different characters by
 setting C<-sethotch> and C<-unsethotch> respectively.
+
+=head2 new_from_serialised()
+
+    my $i = Image::Xbm->new_from_serialised( $s ) ;
+
+Creates an image from a string created with the C<serialse()> method. Since
+such strings are a little more compressed than xbm files or Image::Xbm objects
+they might be useful if storing a lot of bitmaps, or for transferring bitmaps
+over comms links.
+
+=head2 serialise()
+
+    my $s = $i->serialise ;
+
+Creates a string version of the image which can be completed recreated using
+the C<new_from_serialised> method.
 
 =head2 get()
     
@@ -690,6 +749,11 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2000/05/05
+
+Added new_from_serialised() and serialise() methods.
+
 
 2000/05/04
 
