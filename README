@@ -284,6 +284,12 @@ Returns the image as a string of 0's and 1's, e.g.
 
 =head1 CHANGES
 
+2000/11/09
+
+Added Jerrad Pierce's patch to allow load() to accept filehandles or strings;
+will document in next release.
+
+
 2000/05/05
 
 Added new_from_serialised() and serialise() methods.

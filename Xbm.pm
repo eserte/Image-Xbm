@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.17 2000/05/25 20:45:54 root Exp $ 
+# $Id: Xbm.pm,v 1.19 2000/11/09 19:05:31 mark Exp mark $ 
 
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.07' ;
+$VERSION = '1.08' ;
 
 use Image::Base ;
 
@@ -375,7 +375,17 @@ sub load { # Object method
     local $_ ;
     my $fh = Symbol::gensym ;
 
-    open $fh, $file or croak "load() failed to open `$file': $!" ;
+    if( not ref $file ) {
+        open $fh, $file or croak "load() failed to open `$file': $!" ;
+    }
+    elsif( ref($file) eq 'SCALAR' ) {
+        require IO::String;
+        $fh = IO::String->new( $$file );
+    }
+    else {
+        seek($file, 0, 0) or croak "load() can't rewind handle for `$file': $!";
+        $fh = $file;
+    }
 
     while( <$fh> ) {
         $width  = $1, next if /#define.*width\s+(\d+)/o ; 
@@ -762,6 +772,12 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2000/11/09
+
+Added Jerrad Pierce's patch to allow load() to accept filehandles or strings;
+will document in next release.
+
 
 2000/05/05
 
