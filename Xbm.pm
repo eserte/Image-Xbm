@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.5 2000/04/30 21:26:54 root Exp root $ 
+# $Id: Xbm.pm,v 1.9 2000/05/01 15:03:42 root Exp root $ 
 
 use strict ;
 
 use vars qw( $VERSION ) ;
-$VERSION = '1.01' ;
+$VERSION = '1.02' ;
 
 use Carp qw( carp croak ) ;
 use Symbol () ;
@@ -26,7 +26,6 @@ my @MASK  = ( 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 ) ;
 # _class_set    class   object
 # _get                  object
 # _set                  object
-# _vec                  object
 
 {
     my( $setch, $unsetch, $sethotch, $unsethotch ) = ( '#', '-', 'H', 'h', ) ;
@@ -101,19 +100,6 @@ sub _set { # Object method
 }
 
 
-sub _vec { # Object method
-    my $self  = shift ;
-#    my $class = ref( $self ) || $self ;
-
-    my $offset = shift ;
-
-    # No range checking
-    CORE::vec( $self->{-bits}, $offset, 1 ) = shift if @_ ;
-
-    CORE::vec( $self->{-bits}, $offset, 1 ) ;
-}
-
-
 ### Public methods
 
 sub new_from_string { # Class and object method
@@ -129,30 +115,30 @@ sub new_from_string { # Class and object method
         @line = split /\n/, $_[0] ;
     }
 
-    my $setch      = $class->get( -setch ) ;
-    my $sethotch   = $class->get( -sethotch ) ;
-    my $unsethotch = $class->get( -unsethotch ) ;
+    my( $setch, $sethotch, $unsethotch ) = 
+        $class->get( '-setch', '-sethotch', '-unsethotch' ) ;
+
     my $width ;
     my $y = 0 ;
     
-    $self = $class->new( -width => 8192, -height => 8192 ) ;
+    $self = $class->new( '-width' => 8192, '-height' => 8192 ) ;
 
     foreach my $line ( @line ) {
         next if $line =~ /^\s*$/ ;
         unless( defined $width ) {
             $width = length $line ;
-            $self->_set( -width => $width ) ;
+            $self->_set( '-width' => $width ) ;
         }
         for( my $x = 0 ; $x < $width ; $x++ ) {
             my $c = substr( $line, $x, 1 ) ;
             $self->xy( $x, $y, $c eq $setch ? 1 : $c eq $sethotch ? 1 : 0 ) ;
-            $self->set( -hotx => $x, -hoty => $y ) 
+            $self->set( '-hotx' => $x, '-hoty' => $y ) 
             if $c eq $sethotch or $c eq $unsethotch ;
         }
         $y++ ;
     }
 
-    $self->_set( -height => $y ) ;
+    $self->_set( '-height' => $y ) ;
 
     $self ;
 }
@@ -166,9 +152,9 @@ sub new { # Class and object method
 
     # Defaults
     $self = {
-            -hotx => -1, # This is used to signify unset
-            -hoty => -1, # This is used to signify unset
-            -bits => '',
+            '-hotx' => -1, # This is used to signify unset
+            '-hoty' => -1, # This is used to signify unset
+            '-bits' => '',
         } ;
 
     bless $self, $class ;
@@ -185,7 +171,7 @@ sub new { # Class and object method
         $self->_set( $field, $arg{$field} ) if defined $arg{$field} ;
     }
 
-    $self->load if $self->get( -file ) and not $self->get( -bits ) ;
+    $self->load if $self->get( '-file' ) and not $self->get( '-bits' ) ;
 
     foreach my $field ( qw( -width -height ) ) {
         croak "new() $field must be set" unless defined $self->get( $field ) ;
@@ -199,14 +185,20 @@ sub get { # Object method (and class method for class attributes)
     my $self  = shift ;
     my $class = ref( $self ) || $self ;
   
-    my $field = shift ;
+    my @result ;
 
-    if( $field =~ /^-(?:un)?set(?:hot)?ch$/o ) {
-        $class->_class_get( $field ) ;
+    while( @_ ) {
+        my $field = shift ;
+
+        if( $field =~ /^-(?:un)?set(?:hot)?ch$/o ) {
+            push @result, $class->_class_get( $field ) ;
+        }
+        else {
+            push @result, $self->_get( $field ) ;
+        }
     }
-    else {
-        $self->_get( $field ) ;
-    }
+
+    wantarray ? @result : shift @result ;
 }
 
 
@@ -222,9 +214,9 @@ sub set { # Object method (and class method for class attributes)
         carp "set() $field is read-only"  
         if $field eq '-bits' or $field eq '-width' or $field eq '-height' ;
         carp "set() -hotx `$val' is out of range" 
-        if $field eq '-hotx' and ( $val < -1 or $val >= $self->get( -width ) ) ;
+        if $field eq '-hotx' and ( $val < -1 or $val >= $self->get( '-width' ) ) ;
         carp "set() -hoty `$val' is out of range" 
-        if $field eq '-hoty' and ( $val < -1 or $val >= $self->get( -height ) ) ;
+        if $field eq '-hoty' and ( $val < -1 or $val >= $self->get( '-height' ) ) ;
 
         if( $field =~ /^-(?:un)?set(?:hot)?ch$/o ) {
             $class->_class_set( $field, $val ) ;
@@ -242,15 +234,15 @@ sub xy { # Object method
 
     my( $x, $y, $val ) = @_ ; 
 
-    my $width = $self->get( -width ) ;
+    # No range checking
+    my $offset = ( $y * $self->get( '-width' ) ) + $x ;
 
-    croak "xy() x `$x' is out of range" unless $x >= 0 and $x < $width ;
-    croak "xy() y `$y' is out of range" 
-    unless $y >= 0 and $y < $self->get( -height ) ;
-
-    $self->_vec( ( $y * $width ) + $x, $val ) if defined $val ;
-
-    $self->_vec( ( $y * $width ) + $x ) ;
+    if( defined $val ) {
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) = $val ; 
+    }
+    else {
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) ; 
+    }
 }
 
 
@@ -261,9 +253,12 @@ sub vec { # Object method
     my( $offset, $val ) = @_ ; 
 
     # No range checking
-    $self->_vec( $offset, $val ) if defined $val ;
-
-    $self->_vec( $offset ) ;
+    if( defined $val ) {
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) = $val ; 
+    }
+    else {
+        CORE::vec( $self->{'-bits'}, $offset, 1 ) ; 
+    }
 }
 
 
@@ -276,9 +271,9 @@ sub is_equal { # Object method
     unless ref $obj and $obj->isa( __PACKAGE__ ) ;
 
     # We ignore -file, -hotx and -hoty when we consider equality.
-    return 0 if $self->get( -width )  != $obj->get( -width )  or 
-                $self->get( -height ) != $obj->get( -height ) or
-                $self->get( -bits )   ne $obj->get( -bits ) ;
+    return 0 if $self->get( '-width' )  != $obj->get( '-width' )  or 
+                $self->get( '-height' ) != $obj->get( '-height' ) or
+                $self->get( '-bits' )   ne $obj->get( '-bits' ) ;
 
     1 ;
 }
@@ -288,23 +283,27 @@ sub as_string { # Object method
     my $self  = shift ;
 #    my $class = ref( $self ) || $self ;
 
-    my $hotch      = shift || 0 ;
-    my $setch      = $self->get( -setch ) ;
-    my $unsetch    = $self->get( -unsetch ) ;
-    my $sethotch   = $self->get( -sethotch ) ;
-    my $unsethotch = $self->get( -unsethotch ) ;
-    my $hotx       = $self->get( -hotx ) ;
-    my $hoty       = $self->get( -hoty ) ;
-    my $string     = '' ;
+    my $hotch = shift || 0 ;
 
-    for( my $y = 0 ; $y < $self->get( -height ) ; $y++ ) {
-        for( my $x = 0 ; $x < $self->get( -width ) ; $x++ ) {
+    my( $setch, $unsetch, $sethotch, $unsethotch, 
+        $hotx, $hoty, $bits, $width, $height ) =
+            $self->get( '-setch', '-unsetch', '-sethotch', '-unsethotch', 
+                        '-hotx', '-hoty', '-bits', '-width', '-height' ) ;
+
+    my $bitindex = 0 ;
+    my $string   = '' ;
+
+    for( my $y = 0 ; $y < $height ; $y++ ) {
+        for( my $x = 0 ; $x < $width ; $x++ ) {
             if( $hotch and $x == $hotx and $y == $hoty ) {
-                $string .= $self->xy( $x, $y ) ? $sethotch : $unsethotch ;
+                $string .= CORE::vec( $bits, $bitindex, 1 ) ? 
+                                $sethotch : $unsethotch ;
             }
             else {
-                $string .= $self->xy( $x, $y ) ? $setch : $unsetch ;
+                $string .= CORE::vec( $bits, $bitindex, 1 ) ? 
+                                $setch : $unsetch ;
             }
+            $bitindex++ ;
         }
         $string .= "\n" ;
     }
@@ -317,7 +316,7 @@ sub as_binstring { # Object method
     my $self  = shift ;
 #    my $class = ref( $self ) || $self ;
 
-    unpack "b*", $self->get( -bits ) ;
+    unpack "b*", $self->get( '-bits' ) ;
 }
 
 
@@ -326,11 +325,11 @@ sub load { # Object method
     my $self  = shift ;
 #    my $class = ref( $self ) || $self ;
 
-    my $file  = shift() || $self->get( -file ) ;
+    my $file  = shift() || $self->get( '-file' ) ;
 
     croak "load() no file specified" unless $file ;
 
-    $self->set( -file, $file ) ;
+    $self->set( '-file', $file ) ;
 
     my( @val, $width, $height, $hotx, $hoty ) ;
     local $_ ;
@@ -350,10 +349,10 @@ sub load { # Object method
 
     close $fh or croak "load() failed to close `$file': $!" ;
 
-    $self->_set( -width,  $width ) ;
-    $self->_set( -height, $height ) ;
-    $self->set( -hotx,    defined $hotx ? $hotx : -1 ) ; 
-    $self->set( -hoty,    defined $hoty ? $hoty : -1 ) ;
+    $self->_set( '-width',  $width ) ;
+    $self->_set( '-height', $height ) ;
+    $self->set( '-hotx',    defined $hotx ? $hotx : -1 ) ; 
+    $self->set( '-hoty',    defined $hoty ? $hoty : -1 ) ;
 
     my( $x, $y ) = ( 0, 0 ) ;
     my $bitindex = 0 ;
@@ -373,7 +372,7 @@ sub load { # Object method
         }
     }
 
-    $self->_set( -bits, $bits ) ;
+    $self->_set( '-bits', $bits ) ;
 }
 
 
@@ -382,16 +381,14 @@ sub save { # Object method
     my $self  = shift ;
 #    my $class = ref( $self ) || $self ;
 
-    my $file   = shift() || $self->get( -file ) ;
+    my $file   = shift() || $self->get( '-file' ) ;
 
     croak "save() no file specified" unless $file ;
 
-    $self->set( -file, $file ) ;
+    $self->set( '-file', $file ) ;
 
-    my $width  = $self->get( -width ) ;
-    my $height = $self->get( -height ) ;
-    my $hotx   = $self->get( -hotx ) ;
-    my $hoty   = $self->get( -hoty ) ;
+    my( $width, $height, $hotx, $hoty ) = 
+        $self->get( '-width', '-height', '-hotx', '-hoty' ) ;
 
     my $fh = Symbol::gensym ;
     open $fh, ">$file" or croak "save() failed to open `$file': $!" ;
@@ -565,8 +562,10 @@ setting C<-sethotch> and C<-unsethotch> respectively.
 =head2 get()
     
     my $width = $i->get( -width ) ;
+    my( $hotx, $hoty ) = $i->get( -hotx, -hoty ) ;
 
-Get any of the object's attributes. 
+Get any of the object's attributes. Multiple attributes may be requested in a
+single call.
 
 See C<xy> and C<vec> to get/set bits of the image itself.
 
@@ -574,9 +573,9 @@ See C<xy> and C<vec> to get/set bits of the image itself.
 
     $i->set( -hotx => 120, -hoty => 32 ) ;
 
-Set any of the object's attributes. Multiple attributes may be set in one go.
-Except for C<-setch> and C<-unsetch> all attributes are object attributes;
-some attributes are read-only.
+Set any of the object's attributes. Multiple attributes may be set in a single
+call. Except for C<-setch> and C<-unsetch> all attributes are object
+attributes; some attributes are read-only.
 
 See C<xy> and C<vec> to get/set bits of the image itself.
 
@@ -688,6 +687,15 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2000/05/01
+
+Improved speed of vec(), xy() and as_string().
+
+Tried use integer to improve speed but according to Benchmark it made the code
+slower so I dropped it; interestingly perl 5.6.0 was around 25% slower than
+perl 5.004 with and without use integer.
+
 
 2000/04/30 
 

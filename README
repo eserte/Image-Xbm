@@ -124,8 +124,10 @@ setting C<-sethotch> and C<-unsethotch> respectively.
 =head2 get()
     
     my $width = $i->get( -width ) ;
+    my( $hotx, $hoty ) = $i->get( -hotx, -hoty ) ;
 
-Get any of the object's attributes. 
+Get any of the object's attributes. Multiple attributes may be requested in a
+single call.
 
 See C<xy> and C<vec> to get/set bits of the image itself.
 
@@ -133,9 +135,9 @@ See C<xy> and C<vec> to get/set bits of the image itself.
 
     $i->set( -hotx => 120, -hoty => 32 ) ;
 
-Set any of the object's attributes. Multiple attributes may be set in one go.
-Except for C<-setch> and C<-unsetch> all attributes are object attributes;
-some attributes are read-only.
+Set any of the object's attributes. Multiple attributes may be set in a single
+call. Except for C<-setch> and C<-unsetch> all attributes are object
+attributes; some attributes are read-only.
 
 See C<xy> and C<vec> to get/set bits of the image itself.
 
@@ -247,6 +249,15 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2000/05/01
+
+Improved speed of vec(), xy() and as_string().
+
+Tried use integer to improve speed but according to Benchmark it made the code
+slower so I dropped it; interestingly perl 5.6.0 was around 25% slower than
+perl 5.004 with and without use integer.
+
 
 2000/04/30 
 
