@@ -1,11 +1,11 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.14 2000/05/06 12:49:00 root Exp root $ 
+# $Id: Xbm.pm,v 1.15 2000/05/15 22:11:12 root Exp root $ 
 
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.05' ;
+$VERSION = '1.06' ;
 
 use Image::Base ;
 
@@ -16,6 +16,11 @@ use Symbol () ;
 
 
 # Private class data 
+
+my $DEF_SIZE = 8192 ;
+my $UNSET    =   -1 ;
+my $MASK     =    7 ;
+my $ROWS     =   12 ;
 
 # If you inherit don't clobber these fields!
 my @FIELD = qw( -file -width -height -hotx -hoty -bits 
@@ -32,7 +37,7 @@ my @MASK  = ( 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80 ) ;
 # _set                  object inherited
 
 {
-    my %Ch = ( -setch    => '#', -unsetch   => '-', 
+    my %Ch = ( -setch    => '#', -unsetch    => '-', 
                -sethotch => 'H', -unsethotch => 'h' ) ;
         
 
@@ -84,7 +89,7 @@ sub new_from_string { # Class and object method
     my $width ;
     my $y = 0 ;
     
-    $self = $class->new( '-width' => 8192, '-height' => 8192 ) ;
+    $self = $class->new( '-width' => $DEF_SIZE, '-height' => $DEF_SIZE ) ;
 
     foreach my $line ( @line ) {
         next if $line =~ /^\s*$/ ;
@@ -115,8 +120,8 @@ sub new { # Class and object method
 
     # Defaults
     $self = {
-            '-hotx' => -1, # This is used to signify unset
-            '-hoty' => -1, # This is used to signify unset
+            '-hotx' => $UNSET, 
+            '-hoty' => $UNSET,
             '-bits' => '',
         } ;
 
@@ -154,7 +159,7 @@ sub new_from_serialised { # Class and object method
     my $class      = ref( $self ) || $self ;
     my $serialised = shift ;
 
-    $self = $class->new( '-width' => 8192, '-height' => 8192 ) ;
+    $self = $class->new( '-width' => $DEF_SIZE, '-height' => $DEF_SIZE ) ;
 
     my( $flen, $blen, $width, $height, $hotx, $hoty, $data ) =
         unpack "n N n n n n A*", $serialised ;
@@ -164,8 +169,8 @@ sub new_from_serialised { # Class and object method
     $self->_set( '-file'   => $file ) ;
     $self->_set( '-width'  => $width ) ;
     $self->_set( '-height' => $height ) ;
-    $self->_set( '-hotx'   => $hotx > $width  ? -1 : $hotx ) ;
-    $self->_set( '-hoty'   => $hoty > $height ? -1 : $hoty ) ;
+    $self->_set( '-hotx'   => $hotx > $width  ? $UNSET : $hotx ) ;
+    $self->_set( '-hoty'   => $hoty > $height ? $UNSET : $hoty ) ;
     $self->_set( '-bits'   => $bits ) ;
 
     $self ;
@@ -221,9 +226,9 @@ sub set { # Object method (and class method for class attributes)
         carp "set() $field is read-only"  
         if $field eq '-bits' or $field eq '-width' or $field eq '-height' ;
         carp "set() -hotx `$val' is out of range" 
-        if $field eq '-hotx' and ( $val < -1 or $val >= $self->get( '-width' ) ) ;
+        if $field eq '-hotx' and ( $val < $UNSET or $val >= $self->get( '-width' ) ) ;
         carp "set() -hoty `$val' is out of range" 
-        if $field eq '-hoty' and ( $val < -1 or $val >= $self->get( '-height' ) ) ;
+        if $field eq '-hoty' and ( $val < $UNSET or $val >= $self->get( '-height' ) ) ;
 
         if( $field =~ /^-(?:un)?set(?:hot)?ch$/o ) {
             $class->_class_set( $field, $val ) ;
@@ -313,10 +318,17 @@ sub as_string { # Object method
 
     my $hotch = shift || 0 ;
 
-    my( $setch, $unsetch, $sethotch, $unsethotch, 
-        $hotx, $hoty, $bits, $width, $height ) =
-            $self->get( '-setch', '-unsetch', '-sethotch', '-unsethotch', 
-                        '-hotx', '-hoty', '-bits', '-width', '-height' ) ;
+    my( $setch,    $unsetch, 
+        $sethotch, $unsethotch, 
+        $hotx,     $hoty, 
+        $bits, 
+        $width,    $height ) =
+            $self->get( 
+                '-setch',    '-unsetch', 
+                '-sethotch', '-unsethotch', 
+                '-hotx',     '-hoty', 
+                '-bits', 
+                '-width',    '-height' ) ;
 
     my $bitindex = 0 ;
     my $string   = '' ;
@@ -379,8 +391,8 @@ sub load { # Object method
 
     $self->_set( '-width',  $width ) ;
     $self->_set( '-height', $height ) ;
-    $self->set( '-hotx',    defined $hotx ? $hotx : -1 ) ; 
-    $self->set( '-hoty',    defined $hoty ? $hoty : -1 ) ;
+    $self->set( '-hotx',    defined $hotx ? $hotx : $UNSET ) ; 
+    $self->set( '-hoty',    defined $hoty ? $hoty : $UNSET ) ;
 
     my( $x, $y ) = ( 0, 0 ) ;
     my $bitindex = 0 ;
@@ -418,6 +430,9 @@ sub save { # Object method
     my( $width, $height, $hotx, $hoty ) = 
         $self->get( '-width', '-height', '-hotx', '-hoty' ) ;
 
+    my $MASK1  = $MASK + 1 ;
+    my $ROWSn1 = $ROWS - 1 ;
+
     my $fh = Symbol::gensym ;
     open $fh, ">$file" or croak "save() failed to open `$file': $!" ;
 
@@ -427,30 +442,28 @@ sub save { # Object method
     
     print $fh "#define ${file}_width $width\n#define ${file}_height $height\n" ;
     print $fh "#define ${file}_x_hot $hotx\n#define ${file}_y_hot $hoty\n" 
-    if $hotx > -1 and $hoty > -1 ; 
+    if $hotx > $UNSET and $hoty > $UNSET ; 
     print $fh "static unsigned char ${file}_bits[] = {\n" ;
 
-    my $padded = ( $width & 7 ) != 0 ;
+    my $padded = ( $width & $MASK ) != 0 ;
     my @char ;
     my $char = 0 ;
     for( my $y = 0 ; $y < $height ; $y++ ) {
         for( my $x = 0 ; $x < $width ; $x++ ) {
-            my $mask = $x & 7 ;
+            my $mask = $x & $MASK ;
             $char[$char] = 0 unless defined $char[$char] ;
-            if( $self->xybit( $x, $y ) ) {
-                $char[$char] |= $MASK[$mask] ;
-            }
-            $char++ if $mask == 7 ;
+            $char[$char] |= $MASK[$mask] if $self->xybit( $x, $y ) ; 
+            $char++ if $mask == $MASK ;
         }
         $char++ if $padded ;
     }
 
     my $i = 0 ;
-    my $bytes_per_char = ( $width + 7 ) / 8 ;
+    my $bytes_per_char = ( $width + $MASK ) / $MASK1 ;
     foreach $char ( @char ) {
         printf $fh " 0x%02x", $char ;
         print  $fh "," unless $i == $#char ;
-        print  $fh "\n" if $i % 12 == 11 ;
+        print  $fh "\n" if $i % $ROWS == $ROWSn1 ;
         $i++ ;
     }
     print $fh " } ;\n";
