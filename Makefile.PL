@@ -18,6 +18,7 @@ WriteMakefile(
     'PREREQ_PM'    => {
         'Image::Base' => '1.06',
         'Test::More'  => 0,
+        'File::Temp'  => 0,
     },
     'dist'         => { COMPRESS => "gzip -9", SUFFIX => "gz" },
 ) ;
