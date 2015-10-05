@@ -1,11 +1,9 @@
 package Image::Xbm ;    # Documented at the __END__
 
-# $Id: Xbm.pm,v 1.19 2000/11/09 19:05:31 mark Exp mark $ 
-
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.08' ;
+$VERSION = '1.09' ;
 
 use Image::Base ;
 

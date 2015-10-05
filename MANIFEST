@@ -1,5 +1,6 @@
 Xbm.pm
 t/xbm.t
+Changes
 MANIFEST
 MANIFEST.SKIP
 Makefile.PL

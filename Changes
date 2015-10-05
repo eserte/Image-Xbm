@@ -1,0 +1,5 @@
+Revision history for psort.
+
+1.09    2015-10-05
+	- test script modernization and fix for Windows (RT #97600)
+	- distribution with META files (RT #107480)
