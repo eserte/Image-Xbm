@@ -390,7 +390,7 @@ sub load { # Object method
         $height = $1, next if /#define.*height\s+(\d+)/o ; 
         $hotx   = $1, next if /#define.*_x_hot\s+(\d+)/o ; 
         $hoty   = $1, next if /#define.*_y_hot\s+(\d+)/o ; 
-        push @val, map { hex } /0[xX]([A-Fa-f\d][A-Fa-f\d]?)/g ; 
+        push @val, map { hex } /0[xX]([A-Fa-f\d][A-Fa-f\d]?)\b/g ; 
     }
     croak "load() failed to find dimension(s) in `$file'" 
     unless defined $width and defined $height ;
