@@ -1,5 +1,6 @@
 Xbm.pm
 t/xbm.t
+t/xbm-badfile.t
 Changes
 MANIFEST
 MANIFEST.SKIP
