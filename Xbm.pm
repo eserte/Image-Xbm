@@ -446,7 +446,7 @@ sub save { # Object method
 
     $file =~ s,^.*/,,o ;            
     $file =~ s/\.xbm$//o ;         
-    $file =~ tr/[-_A-Za-z0-9]/_/c ;
+    $file =~ tr/_A-Za-z0-9/_/c ;
     
     print $fh "#define ${file}_width $width\n#define ${file}_height $height\n" ;
     print $fh "#define ${file}_x_hot $hotx\n#define ${file}_y_hot $hoty\n" 
