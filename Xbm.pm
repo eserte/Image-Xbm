@@ -3,7 +3,7 @@ package Image::Xbm ;    # Documented at the __END__
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.09' ;
+$VERSION = '1.10' ;
 
 use Image::Base ;
 
@@ -770,6 +770,13 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2016/02/23 (Slaven Rezic)
+
+Make sure macro/variable names are always sane.
+
+More strict parsing of bits.
+
 
 2000/11/09
 

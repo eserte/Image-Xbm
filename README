@@ -284,6 +284,13 @@ Returns the image as a string of 0's and 1's, e.g.
 
 =head1 CHANGES
 
+2016/02/23 (Slaven Rezic)
+
+Make sure macro/variable names are always sane.
+
+More strict parsing of bits.
+
+
 2000/11/09
 
 Added Jerrad Pierce's patch to allow load() to accept filehandles or strings;
