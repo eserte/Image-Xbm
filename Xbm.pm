@@ -138,7 +138,9 @@ sub new { # Class and object method
     }
 
     my $file = $self->get( '-file' ) ;
-    $self->load if defined $file and -r $file and not $self->{'-bits'} ;
+    if (defined $file and not $self->{-bits}) {
+        $self->load if ref $file or -r $file;
+    }
 
     croak "new() `$file' not found or unreadable" 
     if defined $file and not defined $self->get( '-width' ) ;
