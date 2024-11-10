@@ -3,7 +3,7 @@ package Image::Xbm ;    # Documented at the __END__
 use strict ;
 
 use vars qw( $VERSION @ISA ) ;
-$VERSION = '1.10' ;
+$VERSION = '1.11' ;
 
 use Image::Base ;
 
@@ -772,6 +772,11 @@ Returns the image as a string of 0's and 1's, e.g.
     1111101110001110001001001000100000010000
 
 =head1 CHANGES
+
+2024/11/10
+
+Allow filehandles in new()
+
 
 2016/02/23 (Slaven Rezic)
 
